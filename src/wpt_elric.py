@@ -1,77 +1,114 @@
-#Este es el código principal que realiza la clasificación de imagenes de EEG
 import pandas as pd
-import numpy as np
-
 import tensorflow as tf
-from keras import layers, models
-from sklearn.model_selection import train_test_split
+import numpy as np
+import pywt
+import itertools
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
+from sklearn.model_selection import train_test_split, KFold
 from sklearn.preprocessing import StandardScaler
-
+from sklearn.metrics import confusion_matrix, classification_report, accuracy_score
 import seaborn as sns
 import matplotlib.pyplot as plt
-from sklearn.metrics import confusion_matrix
 
-# Paso 1: Cargar el archivo CSV procesado
+# Step 1: Load the processed CSV file
 df = pd.read_csv('D:/kathy/Downloads/EMFUTECH/ML_CODE/MIRAI_templates/EEG_AURA_RFClassification-main/CSV/csv_fusionado_processed.csv')
 
-# Paso 2: Dividir los datos en características y etiquetas
+# Step 2: Split data into features and labels
 X = df[['Mean', 'STD', 'Asymmetry']]
 y = df['Label']
 
-# Paso 3: Dividir los datos en conjuntos de entrenamiento y prueba con más aleatoriedad
+# Step 3: Split data into training and testing sets with more randomness
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, shuffle=True)
 
-# Paso 4: Estandarizar las features
+# Step 4: Standardize the features
 scaler = StandardScaler()
 X_train_scaled = scaler.fit_transform(X_train)
 X_test_scaled = scaler.transform(X_test)
 
-#Paso 5 Wavelet Transform
-import pywt
+# Convert labels to NumPy array
+y_train = y_train.to_numpy()
+y_test = y_test.to_numpy()
 
-def wavelet_transform(signals, wavelet='db4', level=4):
-    coeffs = []
-    for signal in signals:
-        coeff = pywt.wavedec(signal, wavelet, level=level)
-        coeffs.append(coeff)
-    return np.array(coeffs)
+# Define a function to perform wavelet transformation
+def wavelet_transform(data, wavelet='db1', level=1):
+    coeffs = pywt.wavedec(data, wavelet, level=level)
+    coeffs = np.concatenate(coeffs, axis=-1)
+    return coeffs
 
-# Apply wavelet transform to the training and testing data
-X_train_wavelet = wavelet_transform(X_train_scaled)
-X_test_wavelet = wavelet_transform(X_test_scaled)
+# Apply wavelet transformation to the features
+X_train_wavelet = np.array([wavelet_transform(sample) for sample in X_train_scaled])
+X_test_wavelet = np.array([wavelet_transform(sample) for sample in X_test_scaled])
 
-#Build the WNN model
-
-def build_wnn(input_shape):
-    model = models.Sequential()
-    model.add(layers.InputLayer(input_shape=input_shape))
-    model.add(layers.Conv1D(32, kernel_size=3, activation='relu'))
-    model.add(layers.MaxPooling1D(pool_size=2))
-    model.add(layers.Conv1D(64, kernel_size=3, activation='relu'))
-    model.add(layers.MaxPooling1D(pool_size=2))
-    model.add(layers.Flatten())
-    model.add(layers.Dense(128, activation='relu'))
-    model.add(layers.Dense(1, activation='sigmoid'))  # For binary classification
-
-    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+# Define the function to create the Keras model
+def create_model(optimizer='adam', init_mode='uniform', activation='relu', neurons=64):
+    model = Sequential()
+    model.add(Dense(neurons, input_dim=X_train_wavelet.shape[1], kernel_initializer=init_mode, activation=activation))
+    model.add(Dense(neurons // 2, kernel_initializer=init_mode, activation=activation))
+    model.add(Dense(3, kernel_initializer=init_mode, activation='softmax'))
+    model.compile(optimizer=optimizer, loss='sparse_categorical_crossentropy', metrics=['accuracy'])
     return model
 
-# Define input shape based on wavelet-transformed data
-input_shape = X_train_wavelet.shape[1:]
+# Define the hyperparameter grid
+param_grid = {
+    'batch_size': [10, 20, 30],
+    'epochs': [5, 10, 20],
+    'optimizer': ['adam', 'rmsprop'],
+    'init_mode': ['uniform', 'lecun_uniform', 'normal'],
+    'activation': ['relu', 'tanh'],
+    'neurons': [32, 64, 128]
+}
 
-# Build and compile the WNN model
-wnn_model = build_wnn(input_shape)
+# Generate all combinations of hyperparameters
+all_combinations = list(itertools.product(param_grid['batch_size'], param_grid['epochs'], param_grid['optimizer'], param_grid['init_mode'], param_grid['activation'], param_grid['neurons']))
 
-# Train the model
-wnn_model.fit(X_train_wavelet, y_train, epochs=50, batch_size=32, validation_data=(X_test_wavelet, y_test))
+# Perform random search
+n_combinations_to_try = 10  # Number of combinations to try randomly
+np.random.seed(42)
+random_combinations = np.random.choice(len(all_combinations), n_combinations_to_try, replace=False)
 
-# Evaluate the model
-loss, accuracy = wnn_model.evaluate(X_test_wavelet, y_test)
+best_accuracy = 0
+best_params = None
+
+for idx in random_combinations:
+    batch_size, epochs, optimizer, init_mode, activation, neurons = all_combinations[idx]
+    
+    # Create the model with current hyperparameters
+    model = create_model(optimizer=optimizer, init_mode=init_mode, activation=activation, neurons=neurons)
+    
+    # Train the model using cross-validation
+    kfold = KFold(n_splits=5, shuffle=True, random_state=42)
+    accuracies = []
+    
+    for train_idx, val_idx in kfold.split(X_train_wavelet):
+        X_train_cv, X_val_cv = X_train_wavelet[train_idx], X_train_wavelet[val_idx]
+        y_train_cv, y_val_cv = y_train[train_idx], y_train[val_idx]
+        
+        history = model.fit(X_train_cv, y_train_cv, epochs=epochs, batch_size=batch_size, verbose=0)
+        val_loss, val_accuracy = model.evaluate(X_val_cv, y_val_cv, verbose=0)
+        accuracies.append(val_accuracy)
+    
+    mean_accuracy = np.mean(accuracies)
+    
+    if mean_accuracy > best_accuracy:
+        best_accuracy = mean_accuracy
+        best_params = (batch_size, epochs, optimizer, init_mode, activation, neurons)
+
+print(f'Best Accuracy: {best_accuracy:.4f}')
+print(f'Best Hyperparameters: batch_size={best_params[0]}, epochs={best_params[1]}, optimizer={best_params[2]}, init_mode={best_params[3]}, activation={best_params[4]}, neurons={best_params[5]}')
+
+# Train the best model on the full training set
+batch_size, epochs, optimizer, init_mode, activation, neurons = best_params
+best_model = create_model(optimizer=optimizer, init_mode=init_mode, activation=activation, neurons=neurons)
+best_model.fit(X_train_wavelet, y_train, epochs=epochs, batch_size=batch_size, validation_split=0.2, verbose=1)
+
+# Evaluate the best model on the test set
+loss, accuracy = best_model.evaluate(X_test_wavelet, y_test)
 print(f'Test Accuracy: {accuracy * 100:.2f}%')
 
-# Make predictions
-y_pred = wnn_model.predict(X_test_wavelet)
-y_pred = (y_pred > 0.5).astype(int)  # Convert probabilities to class labels (0 or 1)
+# Make predictions with the best model
+y_pred_prob = best_model.predict(X_test_wavelet)
+y_pred = np.argmax(y_pred_prob, axis=1)
 
 # Calcular la matriz de confusión
 cm = confusion_matrix(y_test, y_pred)
@@ -83,3 +120,6 @@ plt.xlabel('Etiqueta Predicha')
 plt.ylabel('Etiqueta Verdadera')
 plt.title('Matriz de Confusión')
 plt.show()
+
+# Print classification report
+print(classification_report(y_test, y_pred))
