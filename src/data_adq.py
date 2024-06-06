@@ -1,8 +1,10 @@
 import tkinter as tk
+from tkinter import simpledialog
 import csv
 from pylsl import StreamInlet, resolve_stream
 import time
 from datetime import datetime
+import os
 
 class CountdownApp:
     def __init__(self, root):
@@ -11,23 +13,35 @@ class CountdownApp:
         self.root.attributes("-fullscreen", True)
         self.root.bind("<Escape>", self.exit_fullscreen)
         
+        # Center the root window
+        self.center_window(root)
+
         # Contador de ciclos
         self.cycle_count = 1
         self.max_cycles = 10
 
-        # Crea una etiqueta para mostrar el contador de ciclos
+        # Prompts for user input
+        self.user_info = self.get_user_info()
+        
+        # File path for CSV
+        self.csv_filename = f"{self.user_info['name']}_{self.user_info['type_of_test']}.csv"
+        self.csv_file_path = os.path.join(os.getcwd(), self.csv_filename)
+        
+        # Create and open the CSV file for writing
+        self.csv_file = open(self.csv_file_path, 'w', newline='')
+        self.csv_writer = csv.writer(self.csv_file)
+        self.csv_writer.writerow(['Timestamp', 'Cycle', 'Countdown Type', 'LSL Data'])
+
+        # GUI elements
         self.cycle_label = tk.Label(root, text=f"Cycle: {self.cycle_count}/{self.max_cycles}", font=("Century Gothic", 14))
         self.cycle_label.pack(anchor='ne', padx=10, pady=10)
 
-        # Crea una etiqueta con un mensaje instructivo
         self.legend_label = tk.Label(root, text="Relax your muscles, try to think about your tongue", font=("Century Gothic", 44))
         self.legend_label.pack(pady=50)
 
-        # Crea una etiqueta para mostrar el contador, inicialmente con el valor "20"
         self.label = tk.Label(root, text="20", font=("Century Gothic", 150))
         self.label.pack(pady=20)
         
-        # Crea un botón para iniciar el módulo de descanso
         self.start_button = tk.Button(root, text="Start Rest Module", command=self.start_countdown, font=("Century Gothic", 14))
         self.start_button.pack(pady=60)
 
@@ -41,11 +55,22 @@ class CountdownApp:
         self.current_countdown_type = None
         self.inlet = None
         self.setup_lsl()
-        
-        # Crear o abrir el archivo CSV para escritura
-        self.csv_file = open('lsl_data.csv', 'w', newline='')
-        self.csv_writer = csv.writer(self.csv_file)
-        self.csv_writer.writerow(['Timestamp', 'Cycle', 'Countdown Type', 'LSL Data'])
+
+    def center_window(self, win):
+        win.update_idletasks()
+        width = win.winfo_width()
+        height = win.winfo_height()
+        x = (win.winfo_screenwidth() // 2) - (width // 2)
+        y = (win.winfo_screenheight() // 2) - (height // 2)
+        win.geometry(f'{width}x{height}+{x}+{y}')
+
+    def get_user_info(self):
+        user_info = {}
+        user_info['name'] = simpledialog.askstring("Input", "Enter your name:", parent=self.root)
+        user_info['age'] = simpledialog.askinteger("Input", "Enter your age:", parent=self.root)
+        user_info['type_of_test'] = simpledialog.askstring("Input", "Enter the type of test:", parent=self.root)
+        user_info['dominant_hand'] = simpledialog.askstring("Input", "Enter your dominant hand:", parent=self.root)
+        return user_info
 
     def setup_lsl(self):
         # Resolver el flujo de datos LSL
