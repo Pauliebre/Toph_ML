@@ -1,10 +1,12 @@
 import tkinter as tk
 from tkinter import simpledialog
 import csv
+import pylsl
 from pylsl import StreamInlet, resolve_stream
 import time
 from datetime import datetime
 import os
+import threading
 
 class CountdownApp:
     def __init__(self, root):
@@ -12,6 +14,7 @@ class CountdownApp:
         self.root.title("EEG Data Acquisition Protocol - Motor Imagery")
         self.root.attributes("-fullscreen", True)
         self.root.bind("<Escape>", self.exit_fullscreen)
+        self.root.bind("<space>", self.spacebar_pressed)
         
         # Center the root window
         self.center_window(root)
@@ -30,7 +33,12 @@ class CountdownApp:
         # Create and open the CSV file for writing
         self.csv_file = open(self.csv_file_path, 'w', newline='')
         self.csv_writer = csv.writer(self.csv_file)
-        self.csv_writer.writerow(['Timestamp', 'Cycle', 'Countdown Type', 'LSL Data'])
+        lsl_headers = [f'Delta {i}' for i in range(1, 9)] + \
+                      [f'Theta {i}' for i in range(1, 9)] + \
+                      [f'Alpha {i}' for i in range(1, 9)] + \
+                      [f'Beta {i}' for i in range(1, 9)] + \
+                      [f'Gamma {i}' for i in range(1, 9)]
+        self.csv_writer.writerow(['Timestamp', 'Cycle', 'Countdown Type'] + lsl_headers)
 
         # GUI elements
         self.cycle_label = tk.Label(root, text=f"Cycle: {self.cycle_count}/{self.max_cycles}", font=("Century Gothic", 14))
@@ -56,6 +64,11 @@ class CountdownApp:
         self.inlet = None
         self.setup_lsl()
 
+        # Thread for collecting data
+        self.running = True
+        self.data_thread = threading.Thread(target=self.data_collection_thread)
+        self.data_thread.start()
+
     def center_window(self, win):
         win.update_idletasks()
         width = win.winfo_width()
@@ -75,15 +88,20 @@ class CountdownApp:
     def setup_lsl(self):
         # Resolver el flujo de datos LSL
         print("Looking for an LSL stream...")
-        streams = resolve_stream()
-        self.inlet = StreamInlet(streams[0])
-        print("LSL stream found.")
+        brain_stream = pylsl.resolve_stream("name", "AURA_Power")
 
-    def collect_lsl_data(self):
-        if self.current_countdown_type:
-            sample, timestamp = self.inlet.pull_sample()
-            self.csv_writer.writerow([datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S.%f'), 
-                                      self.cycle_count, self.current_countdown_type, sample])
+        self.inlet = StreamInlet(brain_stream[0])
+        info = self.inlet.info()
+        sample_rate = info.nominal_srate()
+        print(f"LSL stream found with sample rate: {sample_rate} Hz")
+
+    def data_collection_thread(self):
+        while self.running:
+            if self.current_countdown_type:
+                sample, timestamp = self.inlet.pull_sample()
+                self.csv_writer.writerow([datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S.%f'), 
+                                          self.cycle_count, self.current_countdown_type] + sample)
+            time.sleep(0.1)  # Collect data 10 times per second
 
     def start_countdown(self):
         self.current_countdown_type = "First Countdown"
@@ -121,7 +139,6 @@ class CountdownApp:
     def countdown(self, count):
         self.label.config(text=str(count))
         if count > 0:
-            self.collect_lsl_data()
             self.root.after(1000, self.countdown, count - 1)
         else:
             self.current_countdown_type = None
@@ -146,6 +163,7 @@ class CountdownApp:
                 else:
                     self.legend_label.config(text="All cycles completed!")
                     self.csv_file.close()
+                    self.running = False  # Stop the data collection thread
 
     def countdown_restart(self, count):
         self.label.config(text=str(count))
@@ -169,8 +187,22 @@ class CountdownApp:
             self.fifth_button = None
         self.start_countdown()
 
+    def spacebar_pressed(self, event):
+        if self.start_button.winfo_ismapped():
+            self.start_countdown()
+        elif self.second_button and self.second_button.winfo_ismapped():
+            self.start_second_countdown()
+        elif self.third_button and self.third_button.winfo_ismapped():
+            self.start_third_countdown()
+        elif self.fourth_button and self.fourth_button.winfo_ismapped():
+            self.start_fourth_countdown()
+        elif self.fifth_button and self.fifth_button.winfo_ismapped():
+            self.start_fifth_countdown()
+
+
     def exit_fullscreen(self, event=None):
         self.csv_file.close()
+        self.running = False  # Stop the data collection thread
         self.root.quit()
 
 if __name__ == "__main__":
