@@ -11,15 +11,36 @@ from sklearn.metrics import confusion_matrix, classification_report, accuracy_sc
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-# Step 1: Load the processed CSV file
-df = pd.read_csv('D:/kathy/Downloads/EMFUTECH/ML_CODE/MIRAI_templates/EEG_AURA_RFClassification-main/CSV/csv_fusionado_processed.csv')
+# Step 1: Load the data
+df = pd.read_csv('D:\kathy\Downloads\EMFUTECH\Toph_ML\datos_test\MI\dary_mi.csv')
+
+# Reemplazar los valores de la columna "Countdown Type", donde first countdown (0) es reposo, 
+# second countdown (1) es flexion izq, third countdown (2) es extension izq, fourth countdown (3) es flex der y fifth(4) es extension der
+df['Countdown Type'] = df['Countdown Type'].replace({
+    'First Countdown': 0,
+    'Second Countdown': 1,
+    'Third Countdown': 2,
+    'Fourth Countdown': 3,
+    'Fifth Countdown': 4
+})
 
 # Step 2: Split data into features and labels
-X = df[['Mean', 'STD', 'Asymmetry']]
-y = df['Label']
+X_completo = df[['Cycle', 'Delta 1', 'Delta 2', 'Delta 3', 'Delta 4', 'Delta 5', 'Delta 6', 'Delta 7', 'Delta 8',
+                 'Theta 1', 'Theta 2', 'Theta 3', 'Theta 4', 'Theta 5', 'Theta 6', 'Theta 7', 'Theta 8',
+                 'Alpha 1', 'Alpha 2', 'Alpha 3', 'Alpha 4', 'Alpha 5', 'Alpha 6', 'Alpha 7', 'Alpha 8',
+                 'Beta 1', 'Beta 2', 'Beta 3', 'Beta 4', 'Beta 5', 'Beta 6', 'Beta 7', 'Beta 8',
+                 'Gamma 1', 'Gamma 2', 'Gamma 3', 'Gamma 4', 'Gamma 5', 'Gamma 6', 'Gamma 7', 'Gamma 8']]
+
+X_delta = df[['Delta 1', 'Delta 2', 'Delta 3', 'Delta 4', 'Delta 5', 'Delta 6', 'Delta 7', 'Delta 8']]
+X_theta = df[['Theta 1', 'Theta 2', 'Theta 3', 'Theta 4', 'Theta 5', 'Theta 6', 'Theta 7', 'Theta 8']]
+X_alpha = df[['Alpha 1', 'Alpha 2', 'Alpha 3', 'Alpha 4', 'Alpha 5', 'Alpha 6', 'Alpha 7', 'Alpha 8']]
+X_beta = df[['Beta 1', 'Beta 2', 'Beta 3', 'Beta 4', 'Beta 5', 'Beta 6', 'Beta 7', 'Beta 8']]
+X_gamma = df[['Gamma 1', 'Gamma 2', 'Gamma 3', 'Gamma 4', 'Gamma 5', 'Gamma 6', 'Gamma 7', 'Gamma 8']]
+
+y = df['Countdown Type']
 
 # Step 3: Split data into training and testing sets with more randomness
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, shuffle=True)
+X_train, X_test, y_train, y_test = train_test_split(X_completo, y, test_size=0.2, random_state=42, shuffle=True)
 
 # Step 4: Standardize the features
 scaler = StandardScaler()
@@ -49,7 +70,7 @@ def create_model(optimizer='adam', activation='relu', neurons=64):
     model = Sequential()
     model.add(LSTM(neurons, input_shape=(X_train_wavelet.shape[1], X_train_wavelet.shape[2]), activation=activation))
     model.add(Dense(neurons // 2, activation=activation))
-    model.add(Dense(3, activation='softmax'))
+    model.add(Dense(5, activation='softmax'))
     model.compile(optimizer=optimizer, loss='sparse_categorical_crossentropy', metrics=['accuracy'])
     return model
 
