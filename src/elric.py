@@ -12,7 +12,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 # Step 1: Load the data
-df = pd.read_csv('D:\\kathy\\Downloads\\EMFUTECH\\Toph_ML\\dary_mi.csv')
+df = pd.read_csv('D:\kathy\Downloads\EMFUTECH\Toph_ML\datos_test\MI\concatenated_output.csv')
 
 # Reemplazar los valores de la columna "Countdown Type", donde first countdown (0) es reposo, 
 # second countdown (1) es flexion izq, third countdown (2) es extension izq, fourth countdown (3) es flex der y fifth(4) es extension der
