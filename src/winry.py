@@ -2,6 +2,7 @@ import pylsl
 import numpy as np
 import pywt
 import joblib
+import pandas as pd
 
 # Load the trained machine learning model
 model_file_path = 'trained_model.joblib'
@@ -69,22 +70,25 @@ def classify_eeg_data():
             accumulated_samples_scaled = scaler.transform(accumulated_samples_np)
 
             # Apply wavelet transform to the accumulated samples
-            sample_wavelet = wavelet_transform(accumulated_samples_scaled)
+            samples_wavelet = np.array([wavelet_transform(sample) for sample in accumulated_samples_scaled])
             
-            # Print the shape of the wavelet transformed data
-            print(f"Shape after wavelet transform: {sample_wavelet.shape}")
-
+            # Reshape the samples to match the input shape expected by the model
+            samples_wavelet = samples_wavelet.reshape(1, -1)
+            
             # Pad or truncate the data to match the expected input shape
-            sample_wavelet = pad_or_truncate(sample_wavelet, expected_input_shape)
+            samples_wavelet = pad_or_truncate(samples_wavelet[0], expected_input_shape)
             
-            # Reshape the sample to match the input shape expected by the model
-            sample_wavelet = sample_wavelet.reshape(1, -1)
+            # Reshape again to ensure it matches the input shape
+            samples_wavelet = samples_wavelet.reshape(1, -1)
             
-            # Print the shape after reshaping
-            print(f"Shape after reshaping: {sample_wavelet.shape}")
+            # Print the shape after wavelet transform and reshaping
+            print(f"Shape after wavelet transform and reshaping: {samples_wavelet.shape}")
 
             # Classify the sample using the loaded model
-            label = model.predict(sample_wavelet)
+            probabilities = model.predict(samples_wavelet)
+            
+            # Convert probabilities to class labels
+            label = np.argmax(probabilities, axis=1)
             
             # Print the classification label
             print(f"Classified label: {label[0]}")
