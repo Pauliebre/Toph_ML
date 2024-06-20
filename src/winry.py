@@ -34,7 +34,7 @@ def pad_or_truncate(data, size):
 
 # Function to acquire data from the LSL stream and classify it
 def classify_eeg_data():
-    print("looking for an EEG stream...")
+    print("Looking for an EEG stream...")
     brain_stream = pylsl.resolve_stream("name", "AURA_Power")
     
     if not brain_stream:
@@ -51,6 +51,10 @@ def classify_eeg_data():
     accumulation_period = 5.0  # seconds
     num_samples_to_accumulate = int(sample_rate * accumulation_period) 
     accumulated_samples = []
+
+    # Create the LSL outlet for classification labels
+    label_info = pylsl.StreamInfo('Riza_Hawkeye', 'Markers', 1, 0, 'string', 'myuniquelabelid')
+    label_outlet = pylsl.StreamOutlet(label_info)
 
     while True:
         # Read a sample from the inlet
@@ -92,6 +96,10 @@ def classify_eeg_data():
             
             # Print the classification label
             print(f"Classified label: {label[0]}")
+
+            # Send the classification label via LSL
+            label_outlet.push_sample([str(label[0])])
+            print(f"Sent label via LSL: {label[0]}")
 
             # Clear the accumulated samples
             accumulated_samples = []
