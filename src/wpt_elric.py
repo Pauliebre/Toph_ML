@@ -10,6 +10,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import confusion_matrix, classification_report, accuracy_score
 import seaborn as sns
 import matplotlib.pyplot as plt
+import joblib
 
 # Step 1: Load the data
 df = pd.read_csv('D:\kathy\Downloads\EMFUTECH\Toph_ML\datos_test\MI\concatenated_output.csv')
@@ -24,7 +25,7 @@ df['Countdown Type'] = df['Countdown Type'].replace({
 })
 
 # Step 2: Split data into features and labels
-X_completo = df[['Cycle', 'Delta 1', 'Delta 2', 'Delta 3', 'Delta 4', 'Delta 5', 'Delta 6', 'Delta 7', 'Delta 8',
+X_completo = df[['Delta 1', 'Delta 2', 'Delta 3', 'Delta 4', 'Delta 5', 'Delta 6', 'Delta 7', 'Delta 8',
                  'Theta 1', 'Theta 2', 'Theta 3', 'Theta 4', 'Theta 5', 'Theta 6', 'Theta 7', 'Theta 8',
                  'Alpha 1', 'Alpha 2', 'Alpha 3', 'Alpha 4', 'Alpha 5', 'Alpha 6', 'Alpha 7', 'Alpha 8',
                  'Beta 1', 'Beta 2', 'Beta 3', 'Beta 4', 'Beta 5', 'Beta 6', 'Beta 7', 'Beta 8',
@@ -38,6 +39,11 @@ X_train, X_test, y_train, y_test = train_test_split(X_completo, y, test_size=0.2
 scaler = StandardScaler()
 X_train_scaled = scaler.fit_transform(X_train)
 X_test_scaled = scaler.transform(X_test)
+
+# Save the fitted scaler
+scaler_file_path = 'scaler.joblib'
+joblib.dump(scaler, scaler_file_path)
+print(f'Scaler saved to {scaler_file_path}')
 
 # Convert labels to NumPy array
 y_train = y_train.to_numpy()
@@ -98,6 +104,8 @@ for wavelet, level in all_wavelet_combinations:
         best_accuracy = mean_accuracy
         best_wavelet_params = (wavelet, level)
 
+print(f"BIEN IMPORTANTE SHAPE AFTER WAVELET: {X_train_wavelet.shape}")
+print(f"BIEN IMPORTANTE input dimension: {input_dim}")
 print(f'Best Accuracy: {best_accuracy:.4f}')
 print(f'Best Wavelet Parameters: wavelet={best_wavelet_params[0]}, level={best_wavelet_params[1]}')
 
@@ -130,3 +138,8 @@ plt.show()
 
 # Print classification report
 print(classification_report(y_test, y_pred))
+
+# Save the trained model
+model_file_path = 'trained_model.joblib'
+joblib.dump(best_model, model_file_path)
+print(f'Model saved to {model_file_path}')

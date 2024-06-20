@@ -1,8 +1,7 @@
-#0 es flexion LA, 1 es extension LA, 2 es flexion RA, 3 es extension RA, 4 nada sucede (rest)
-
 import serial
 import time
 import threading
+from pylsl import StreamInfo, StreamOutlet
 
 # Configuración de los puertos seriales
 arduino_ports = ["COM8", "COM9"]  # Especifica los puertos correctos para tus dispositivos
@@ -28,6 +27,22 @@ for port in arduino_ports:
 def send_to_arduino(port, value):
     ser_dict[port].write(str(value).encode())  # Envía el valor al Arduino
 
+# Crear el stream info.
+info = StreamInfo('TriggerStream', 'Markers', 1, 0, 'string', 'myuniquetriggerid')
+
+# Crear el outlet.
+outlet = StreamOutlet(info)
+
+# Lista de triggers válidos.
+valid_triggers = ["0", "1", "2", "3", "4"]
+
+def send_trigger(trigger):
+    if trigger in valid_triggers:
+        outlet.push_sample([trigger])
+        print(f"Sent trigger: {trigger}")
+    else:
+        print(f"Invalid trigger: {trigger}. Please enter one of {valid_triggers}.")
+
 def handle_user_input():
     try:
         while True:
@@ -36,14 +51,19 @@ def handle_user_input():
                 break
             elif user_input in ['0']:
                 send_to_arduino("COM8", int(user_input))
+                send_trigger(user_input)
             elif user_input in ['2']:
                 send_to_arduino("COM9", int(user_input) - 2)
+                send_trigger(user_input)
             elif user_input in ['3']:
                 send_to_arduino("COM9", int(9))
+                send_trigger(user_input)
             elif user_input in ['1']:
                 send_to_arduino("COM8", int(9))
+                send_trigger(user_input)
             elif user_input == '4':
                 print("No se envía nada.")
+                send_trigger(user_input)
             else:
                 print("Entrada no válida. Solo se pueden enviar los valores 0, 1, 2, 3 o 4.")
     except KeyboardInterrupt:

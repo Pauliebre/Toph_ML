@@ -8,7 +8,7 @@ info = StreamInfo('TriggerStream', 'Markers', 1, 0, 'string', 'myuniquetriggerid
 outlet = StreamOutlet(info)
 
 # Lista de triggers válidos.
-valid_triggers = ["1", "2", "3", "4"]
+valid_triggers = ["0","1", "2", "3", "4"]
 
 def send_trigger(trigger):
     if trigger in valid_triggers:
@@ -19,7 +19,7 @@ def send_trigger(trigger):
 
 while True:
     # Mostrar el menú y capturar la entrada del usuario.
-    print("Enter the trigger to send (1, 2, 3, 4) or 'q' to quit:")
+    print("Enter the trigger to send (0, 1, 2, 3, 4) or 'q' to quit:")
     user_input = input().strip()
     
     if user_input.lower() == 'q':
