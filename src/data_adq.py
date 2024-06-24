@@ -106,7 +106,7 @@ class CountdownApp:
     def start_countdown(self):
         self.current_countdown_type = "First Countdown"
         self.start_button.pack_forget()
-        self.countdown(20)
+        self.countdown(5)
 
     def start_second_countdown(self):
         self.current_countdown_type = "Second Countdown"
