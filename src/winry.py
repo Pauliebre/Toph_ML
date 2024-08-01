@@ -2,10 +2,11 @@ import pylsl
 import numpy as np
 import pywt
 import joblib
+from tensorflow.keras.models import load_model
 
 # Load the trained machine learning model
-model_file_path = 'trained_model.joblib'
-model = joblib.load(model_file_path)
+model_file_path = 'trained_model.h5'
+model = load_model(model_file_path)
 
 # Load the fitted scaler
 scaler_file_path = 'scaler.joblib'
@@ -14,7 +15,7 @@ scaler = joblib.load(scaler_file_path)
 # Define the best wavelet transform parameters (as determined during training)
 best_wavelet = 'db4'  # The wavelet used during training
 best_level = 5  # The level used during training
-expected_input_shape = 74  # The expected input shape by the model
+expected_input_shape = model.input_shape[1]  # The expected input shape by the model
 
 # Define a function to perform wavelet transformation
 def wavelet_transform(data, wavelet=best_wavelet, level=best_level):

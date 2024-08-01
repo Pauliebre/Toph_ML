@@ -1,3 +1,6 @@
+import os
+
+os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 import pandas as pd
 import tensorflow as tf
 import numpy as np
@@ -12,7 +15,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 # Step 1: Load the data
-df = pd.read_csv('D:\kathy\Downloads\EMFUTECH\Toph_ML\datos_test\MI\dary_mi.csv')
+df = pd.read_csv('C:/Users/edgar/OneDrive/Documentos/MIRAI INNOVATION/EMFUTECH/EMFUTECH_2024_01/NRC/Toph_ML/concatenated_output.csv')
 
 # Reemplazar los valores de la columna "Countdown Type", donde first countdown (0) es reposo, 
 # second countdown (1) es flexion izq, third countdown (2) es extension izq, fourth countdown (3) es flex der y fifth(4) es extension der

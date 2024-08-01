@@ -1,3 +1,7 @@
+import os
+
+os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import pandas as pd
 import tensorflow as tf
 import numpy as np
@@ -13,7 +17,7 @@ import matplotlib.pyplot as plt
 import joblib
 
 # Step 1: Load the data
-df = pd.read_csv('D:\kathy\Downloads\EMFUTECH\Toph_ML\datos_test\MI\concatenated_output.csv')
+df = pd.read_csv('./concatenated_output.csv')
 
 # Reemplazar los valores de la columna "Countdown Type"
 df['Countdown Type'] = df['Countdown Type'].replace({
@@ -140,6 +144,6 @@ plt.show()
 print(classification_report(y_test, y_pred))
 
 # Save the trained model
-model_file_path = 'trained_model.joblib'
-joblib.dump(best_model, model_file_path)
+model_file_path = 'trained_model.h5'
+best_model.save(model_file_path)
 print(f'Model saved to {model_file_path}')
