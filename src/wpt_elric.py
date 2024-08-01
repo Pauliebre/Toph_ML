@@ -36,13 +36,19 @@ X_completo = df[['Delta 1', 'Delta 2', 'Delta 3', 'Delta 4', 'Delta 5', 'Delta 6
                  'Gamma 1', 'Gamma 2', 'Gamma 3', 'Gamma 4', 'Gamma 5', 'Gamma 6', 'Gamma 7', 'Gamma 8']]
 y = df['Countdown Type']
 
+print (f"X_completo shape:{X_completo.shape}")
+
 # Step 3: Split data into training and testing sets
 X_train, X_test, y_train, y_test = train_test_split(X_completo, y, test_size=0.2, random_state=42, shuffle=True)
+print (f"X_train shape:{X_train.shape}")
+
 
 # Step 4: Standardize the features
 scaler = StandardScaler()
 X_train_scaled = scaler.fit_transform(X_train)
 X_test_scaled = scaler.transform(X_test)
+
+print (f"X_scaled shape:{X_train_scaled.shape}")
 
 # Save the fitted scaler
 scaler_file_path = 'scaler.joblib'
@@ -86,7 +92,8 @@ for wavelet, level in all_wavelet_combinations:
     X_test_wavelet = np.array([wavelet_transform(sample, wavelet=wavelet, level=level) for sample in X_test_scaled])
     
     input_dim = X_train_wavelet.shape[1]
-    
+    print (f"input dimension shape = Xtrain_wavelet shape:{input_dim}")
+
     # Create the model with fixed hyperparameters
     model = create_model(input_dim=input_dim)
     
@@ -108,8 +115,8 @@ for wavelet, level in all_wavelet_combinations:
         best_accuracy = mean_accuracy
         best_wavelet_params = (wavelet, level)
 
-print(f"BIEN IMPORTANTE SHAPE AFTER WAVELET: {X_train_wavelet.shape}")
-print(f"BIEN IMPORTANTE input dimension: {input_dim}")
+print(f"BIEN IMPORTANTE SHAPE AFTER WAVELET during search: {X_train_wavelet.shape}")
+print(f"BIEN IMPORTANTE input dimension during search: {input_dim}")
 print(f'Best Accuracy: {best_accuracy:.4f}')
 print(f'Best Wavelet Parameters: wavelet={best_wavelet_params[0]}, level={best_wavelet_params[1]}')
 
@@ -118,8 +125,12 @@ wavelet, level = best_wavelet_params
 X_train_wavelet = np.array([wavelet_transform(sample, wavelet=wavelet, level=level) for sample in X_train_scaled])
 X_test_wavelet = np.array([wavelet_transform(sample, wavelet=wavelet, level=level) for sample in X_test_scaled])
 
+print(f"x train WAVELET usado en entrenamiento: {X_train_wavelet.shape}")
+
 best_model = create_model(input_dim=X_train_wavelet.shape[1])
 best_model.fit(X_train_wavelet, y_train, epochs=20, batch_size=20, validation_split=0.2, verbose=1)
+
+print(f"!!!! best model created using: {X_train_wavelet.shape[1]}")
 
 # Evaluate the best model on the test set
 loss, accuracy = best_model.evaluate(X_test_wavelet, y_test)
