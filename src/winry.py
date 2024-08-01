@@ -2,11 +2,8 @@ import pylsl
 import numpy as np
 import pywt
 import joblib
-<<<<<<< HEAD
 from tensorflow.keras.models import load_model
-=======
 import pandas as pd
->>>>>>> fdbb1b4becdbba4eeea8bcbbd6ae525e5330d099
 
 # Load the trained machine learning model
 model_file_path = 'trained_model.h5'
